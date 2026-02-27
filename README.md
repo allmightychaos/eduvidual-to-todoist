@@ -39,10 +39,10 @@ During deployment, Netlify will request the following environment variables:
 ### 4. Advanced Configuration (Optional)
 
 #### Specify a Custom Todoist Project
-By default, the script syncs tasks to your global Todoist Inbox. If you want tasks routed to a specific project folder, add a `TODOIST_PROJECT_ID` environment variable in your Netlify dashboard. Note: This requires the *numeric* ID of the project. To find this:
+By default, the script syncs tasks to your global Todoist Inbox. If you want tasks routed to a specific project folder, add a `TODOIST_PROJECT_ID` environment variable in your Netlify dashboard. To find the project ID:
 1. Open the project in the Todoist Web App.
-2. Look at the URL in your browser. It should look like: `todoist.com/app/project/eduvidual-2354506253`.
-3. Copy ONLY those final trailing numbers (e.g., `2354506253`) and set it as `TODOIST_PROJECT_ID`. Do not include the project name text.
+2. Look at the URL in your browser. It should look like: `todoist.com/app/project/myproject-YOUR_PROJECT_ID`.
+3. Copy ONLY the alphanumeric hash at the end (e.g., `YOUR_PROJECT_ID`) and set it as `TODOIST_PROJECT_ID`. Do not include the project name prefix.
 
 #### Secure the Status Page
 The deployment includes a public-facing HTML status dashboard. By default, exact error traces are hidden from the public. To view detailed stack traces and runtime information, set a `STATUS_PASSWORD` environment variable in Netlify. You can then authenticate at the bottom of the status page.
