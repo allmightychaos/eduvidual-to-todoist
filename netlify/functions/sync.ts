@@ -33,7 +33,6 @@ export default async (req: Request) => {
         const eventList = Object.values(events).filter(e => e && e.type === 'VEVENT');
         console.log(`Found ${eventList.length} events in feed.`);
         
-        // --- OPTIMIZATION 1: Fetch processed UIDs from Blob instead of querying Todoist ---
         let processedIds: string[] = [];
         try {
             const storedIds = await store.get("processed-events", { type: "json" });
@@ -45,6 +44,8 @@ export default async (req: Request) => {
         }
         const processedSet = new Set(processedIds);
         
+        const now = new Date(); // Added for past event filtering
+
         for (const item of eventList) {
             const eventItem = item as any;
             const summary = eventItem.summary;
@@ -52,42 +53,42 @@ export default async (req: Request) => {
             const uid = eventItem.uid;
             
             if (!summary || !end || !uid) continue;
+
+            const originalDate = new Date(end);
             
-            // --- OPTIMIZATION 2: Check our internal database to prevent the "completed task" bug ---
+            // OPTIMIZATION: Skip past events
+            if (originalDate < now) {
+                console.log(`Skipping past event: ${summary}`);
+                continue;
+            }
+            
             if (processedSet.has(uid)) {
                 console.log(`Skipping already processed task: ${summary}`);
                 continue;
             }
             
-            const originalDate = new Date(end);
             const shiftedDate = new Date(originalDate.getTime() - (24 * 60 * 60 * 1000));
             
-            // --- OPTIMIZATION 3: Handle All-Day vs Specific Time Events ---
             const taskArgs: any = {
                 content: summary,
                 ...(projectId && { projectId })
             };
 
             if (eventItem.datetype === 'date') {
-                // It's an All-Day event, send just the YYYY-MM-DD
                 taskArgs.dueDate = shiftedDate.toISOString().split('T')[0];
             } else {
-                // It has a specific time, send the exact Datetime (RFC3339)
                 taskArgs.dueDatetime = shiftedDate.toISOString();
             }
             
             console.log(`Creating task: "${summary}" | Due: ${taskArgs.dueDate || taskArgs.dueDatetime}`);
             try {
                 await todoist.addTask(taskArgs);
-                
-                // Add the UID to our tracking Set so we never duplicate it again
                 processedSet.add(uid);
             } catch (taskError: any) {
                 console.error(`Failed to create task ${summary}:`, taskError);
             }
         }
         
-        // Save the updated list of processed IDs back to the database
         await store.setJSON("processed-events", Array.from(processedSet));
         
         console.log("Sync completed successfully.");
