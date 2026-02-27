@@ -1,8 +1,11 @@
 import { schedule } from '@netlify/functions';
 import { TodoistApi } from '@doist/todoist-api-typescript';
+import { getStore } from '@netlify/blobs';
 import ical from 'node-ical';
 
 export const handler = schedule("0 * * * *", async (event) => {
+    const store = getStore("sync-state");
+    
     try {
         console.log("Sync started...");
         const todoistToken = process.env.TODOIST_API_TOKEN;
@@ -10,6 +13,7 @@ export const handler = schedule("0 * * * *", async (event) => {
         
         if (!todoistToken || !icalUrl) {
             console.error("Missing environment variables.");
+            await store.setJSON("latest", { timestamp: new Date().toISOString(), status: "error (missing env vars)" });
             return { statusCode: 500 };
         }
         
@@ -43,9 +47,11 @@ export const handler = schedule("0 * * * *", async (event) => {
         }
         
         console.log("Sync completed successfully.");
+        await store.setJSON("latest", { timestamp: new Date().toISOString(), status: "success" });
         return { statusCode: 200 };
     } catch (error) {
         console.error("Error during sync:", error);
+        await store.setJSON("latest", { timestamp: new Date().toISOString(), status: "error" });
         return { statusCode: 500 };
     }
 });
