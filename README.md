@@ -5,16 +5,16 @@
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](./LICENSE)
 
 > **Heads up: Password in URL**
-> The status page passes your password as a URL query parameter (`?pwd=...`). Query params can appear in server logs — but since this is a personal tool and only you can see those logs, it's a deliberate tradeoff for simplicity. The password only unlocks the debug view anyway.
+> The status page passes your password as a URL query parameter (`?pwd=...`). Query params can appear in server logs - but since this is a personal tool and only you can see those logs, it's a deliberate tradeoff for simplicity. The password only unlocks the debug view anyway.
 
-Tired of manually checking Moodle for deadlines? This tool pulls your Eduvidual calendar feed every hour, grabs your upcoming assignments, shifts each deadline 24 hours earlier, and adds them to Todoist — all automatically. Set it up once and forget about it.
+Tired of manually checking Moodle for deadlines? This tool pulls your Eduvidual calendar feed every hour, grabs your upcoming assignments, shifts each deadline 24 hours earlier, and adds them to Todoist - all automatically. Set it up once and forget about it.
 
 ## Features
 
 - **No secrets in code**: API keys, calendar URLs, and passwords all live in environment variables. The repo is fully public and safe to share.
-- **Hourly auto-sync**: A GitHub Actions cron job fires every hour and triggers the sync — no manual intervention needed.
+- **Hourly auto-sync**: A GitHub Actions cron job fires every hour and triggers the sync - no manual intervention needed.
 - **No duplicate tasks**: Each assignment is tracked by its unique iCal ID. The same task will never appear in Todoist twice, even across multiple syncs.
-- **Built-in 24h buffer**: Every deadline is shifted back by exactly 24 hours — because "due tomorrow" is already cutting it close.
+- **Built-in 24h buffer**: Every deadline is shifted back by exactly 24 hours - because "due tomorrow" is already cutting it close.
 
 ## Setup & Deployment
 
@@ -34,13 +34,13 @@ Tired of manually checking Moodle for deadlines? This tool pulls your Eduvidual 
 
 ### 3. Deploy to Netlify
 
-Click the button below — it'll fork this repo to your GitHub and set up the Netlify project automatically.
+Click the button below - it'll fork this repo to your GitHub and set up the Netlify project automatically.
 
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/allmightychaos/eduvidual-to-todoist)
 
 During setup you'll be asked for:
-- `EDUVIDUAL_ICAL_URL` — the calendar URL from Step 1
-- `TODOIST_API_TOKEN` — the API token from Step 2
+- `EDUVIDUAL_ICAL_URL` - the calendar URL from Step 1
+- `TODOIST_API_TOKEN` - the API token from Step 2
 
 ### 4. Optional configuration
 
@@ -50,8 +50,8 @@ By default, tasks land in your Todoist Inbox. To route them to a specific projec
 
 1. Open the project in the Todoist web app.
 2. Look at the URL: `todoist.com/app/project/myproject-YOUR_PROJECT_ID`
-3. Copy just the alphanumeric part at the end (e.g. `YOUR_PROJECT_ID`) — not the project name prefix.
+3. Copy just the alphanumeric part at the end (e.g. `YOUR_PROJECT_ID`) - not the project name prefix.
 
 #### Lock down the status page
 
-The status dashboard is public, but error details are hidden from anyone who doesn't know the password. Set a `STATUS_PASSWORD` environment variable in Netlify to enable the debug view — it shows full error logs, raw sync data, and a Force Sync button to trigger a manual run.
+The status dashboard is public, but error details are hidden from anyone who doesn't know the password. Set a `STATUS_PASSWORD` environment variable in Netlify to enable the debug view - it shows full error logs, raw sync data, and a Force Sync button to trigger a manual run.

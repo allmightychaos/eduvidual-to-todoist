@@ -37,7 +37,7 @@ function parseIcalDate(raw: string): ParsedDate {
             isAllDay: true,
         };
     }
-    // Timed: YYYYMMDDTHHmmss[Z] — treat as UTC
+    // Timed: YYYYMMDDTHHmmss[Z] - treat as UTC
     return {
         iso: `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}T${s.slice(9, 11)}:${s.slice(11, 13)}:${s.slice(13, 15)}Z`,
         isAllDay: false,
@@ -183,7 +183,7 @@ export default async function handler(req: Request): Promise<Response> {
                 console.log(`Created task: "${event.summary}"`);
             } else {
                 const errBody = await taskRes.text();
-                console.error(`Failed to create "${event.summary}": ${taskRes.status} — ${errBody}`);
+                console.error(`Failed to create "${event.summary}": ${taskRes.status} - ${errBody}`);
             }
         }
 
