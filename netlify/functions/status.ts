@@ -1,6 +1,7 @@
 import { getStore } from "@netlify/blobs";
+import { Handler } from "@netlify/functions";
 
-export const handler = async (event) => {
+export const handler: Handler = async (event) => {
     try {
         const password = event.queryStringParameters?.pwd;
         const correctPassword = process.env.STATUS_PASSWORD;
@@ -10,7 +11,7 @@ export const handler = async (event) => {
         const isAuthenticated = correctPassword && password === correctPassword;
 
         const store = getStore("sync-state");
-        let data = null;
+        let data: any = null;
         
         try {
             data = await store.get("latest", { type: "json" });
