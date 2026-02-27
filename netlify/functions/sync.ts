@@ -44,7 +44,7 @@ export default async (req: Request) => {
         }
         const processedSet = new Set(processedIds);
         
-        const now = new Date(); // Added for past event filtering
+        const now = new Date();
 
         for (const item of eventList) {
             const eventItem = item as any;
@@ -52,11 +52,14 @@ export default async (req: Request) => {
             const end = eventItem.end;
             const uid = eventItem.uid;
             
+            // Extract URL and Description
+            const eventUrl = eventItem.url;
+            const eventDescription = eventItem.description;
+            
             if (!summary || !end || !uid) continue;
 
             const originalDate = new Date(end);
             
-            // OPTIMIZATION: Skip past events
             if (originalDate < now) {
                 console.log(`Skipping past event: ${summary}`);
                 continue;
