@@ -15,7 +15,8 @@ export const handler: Handler = async (event) => {
         
         try {
             data = await store.get("latest", { type: "json" });
-        } catch (e) {
+        } catch (e: any) {
+            console.error("Blob error:", e);
             // Store might not exist yet if cron hasn't run
             data = null;
         }
@@ -40,10 +41,11 @@ export const handler: Handler = async (event) => {
             },
             body: JSON.stringify(data),
         };
-    } catch (error) {
+    } catch (error: any) {
+        console.error("Outer error:", error);
         return {
             statusCode: 500,
-            body: JSON.stringify({ timestamp: null, status: "error", message: "Internal Server Error" }),
+            body: JSON.stringify({ timestamp: null, status: "error", message: error.message || "Internal Server Error" }),
         };
     }
 };
