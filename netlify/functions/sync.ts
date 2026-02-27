@@ -1,18 +1,25 @@
 import { schedule } from '@netlify/functions';
 import { TodoistApi } from '@doist/todoist-api-typescript';
+import ical from 'node-ical';
 
 export const handler = schedule("0 * * * *", async (event) => {
     try {
         console.log("Sync started...");
         const todoistToken = process.env.TODOIST_API_TOKEN;
+        const icalUrl = process.env.EDUVIDUAL_ICAL_URL;
         
-        if (!todoistToken) {
-            console.error("Missing TODOIST_API_TOKEN environment variable.");
+        if (!todoistToken || !icalUrl) {
+            console.error("Missing environment variables.");
             return { statusCode: 500 };
         }
         
         const todoist = new TodoistApi(todoistToken);
         console.log("Todoist API client initialized.");
+        
+        console.log(`Fetching iCal feed...`);
+        const events = await ical.async.fromURL(icalUrl);
+        const eventList = Object.values(events).filter(e => e.type === 'VEVENT');
+        console.log(`Found ${eventList.length} events in feed.`);
         
         return { statusCode: 200 };
     } catch (error) {
