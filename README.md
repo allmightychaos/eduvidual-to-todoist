@@ -46,3 +46,9 @@ By default, the script syncs tasks to your global Todoist Inbox. If you want tas
 
 #### Secure the Status Page
 The deployment includes a public-facing HTML status dashboard. By default, exact error traces are hidden from the public. To view detailed stack traces and runtime information, set a `STATUS_PASSWORD` environment variable in Netlify. You can then authenticate at the bottom of the status page.
+
+<details>
+<summary><b>Disclaimer: Security Notice</b></summary>
+
+The status page authentication currently sends the password via a URL query parameter (`?pwd=...`). While this is generally considered a security risk because query parameters can be recorded in server access logs (like Netlify's edge logs), it is intentionally left this way for simplicity. Since this tool is designed for personal use, the only person who can see these logs is you. Furthermore, the password only grants access to view debug logs, not to modify tasks or access your Todoist account.
+</details>
