@@ -4,13 +4,21 @@
   "description": "Netlify Scheduled Function that syncs Eduvidual (Moodle) calendar assignments to Todoist, shifting deadlines 24 hours earlier.",
   "author": "allmightychaos",
   "license": "CC-BY-NC-SA-4.0",
-  "keywords": ["netlify", "todoist", "moodle", "eduvidual", "ical", "automation"],
+  "keywords": [
+    "netlify",
+    "todoist",
+    "moodle",
+    "eduvidual",
+    "ical",
+    "automation"
+  ],
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc"
   },
   "devDependencies": {
+    "@netlify/edge-functions": "^3.0.3",
     "@types/node": "^25.3.2",
     "typescript": "^5.9.3"
   },
