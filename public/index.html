@@ -34,10 +34,19 @@
             border-radius: 8px;
             margin-bottom: 1rem;
             font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
         }
         .success { background-color: #d1fae5; color: #065f46; }
         .error { background-color: #fee2e2; color: #991b1b; }
         .unknown { background-color: #f3f4f6; color: #6b7280; }
+        svg.icon {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
         .time-label {
             font-size: 0.875rem;
             color: #6b7280;
@@ -71,14 +80,35 @@
             border-radius: 6px;
             font-weight: 500;
             cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
         }
         button:hover {
             background-color: #4338ca;
         }
-        .detail-message {
-            font-size: 0.875rem;
-            color: #ef4444;
+        .log-section {
+            display: none;
+            text-align: left;
             margin-top: 0.5rem;
+        }
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        pre.log-viewer {
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 1rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            margin: 0;
+            border: 1px solid #374151;
         }
     </style>
 </head>
@@ -94,57 +124,133 @@
         <div id="timeValue" class="time-value">Loading...</div>
 
         <div class="auth-section">
-            <div class="time-label" style="margin-top:0; margin-bottom: 0.5rem;">View Debug Details:</div>
-            <input type="password" id="passwordInput" placeholder="Enter status password" />
-            <button onclick="fetchStatus()">Unlock Details</button>
-            <div id="detailMessage" class="detail-message"></div>
+            <!-- Login Form -->
+            <div id="loginForm" style="display:flex; flex-direction:column; gap:0.5rem;">
+                <div class="time-label" style="margin-top:0; margin-bottom: 0.25rem;">View Debug Details:</div>
+                <input type="password" id="passwordInput" placeholder="Enter status password" onkeydown="if(event.key === 'Enter') fetchStatus(true)" />
+                <button onclick="fetchStatus(true)">Unlock Details</button>
+            </div>
+
+            <!-- Error Logs -->
+            <div id="logSection" class="log-section">
+                <div class="log-header">
+                    <div class="time-label" style="margin:0; font-weight:600;">Debug Logs:</div>
+                    <button onclick="copyLogs()" style="padding: 0.25rem 0.5rem; font-size:0.75rem; background-color:#6b7280;">
+                        <svg class="icon" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre id="detailMessage" class="log-viewer"></pre>
+            </div>
         </div>
     </div>
 
     <script>
-        async function fetchStatus() {
-            const pwd = document.getElementById('passwordInput').value;
+        const svgs = {
+            success: '<svg class="icon" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"/></svg>',
+            error: '<svg class="icon" viewBox="0 0 24 24"><path d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z"/></svg>',
+            unknown: '<svg class="icon" viewBox="0 0 24 24"><path d="M12 20C16.4 20 20 16.4 20 12S16.4 4 12 4 4 7.6 4 12 7.6 20 12 20M12 2C17.5 2 22 6.5 22 12S17.5 22 12 22 2 17.5 2 12 6.5 2 12 2M12.5 7V12.2L17 14.9L16.2 16.3L11 13.2V7H12.5Z"/></svg>',
+            warning: '<svg class="icon" viewBox="0 0 24 24"><path d="M13 14H11V9H13M13 18H11V16H13M1 21H23L12 2L1 21Z"/></svg>'
+        };
+
+        function setStatusUI(text, type) {
+            const box = document.getElementById('statusBox');
+            box.className = 'status-box ' + (type === 'warning' ? 'error' : type);
+            box.innerHTML = svgs[type] + '<span>' + text + '</span>';
+        }
+
+        // Cookie Helpers
+        function setCookie(name, value, days) {
+            let expires = "";
+            if (days) {
+                let date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + (value || "")  + expires + "; path=/; SameSite=Strict";
+        }
+        function getCookie(name) {
+            let nameEQ = name + "=";
+            let ca = document.cookie.split(';');
+            for(let i=0;i < ca.length;i++) {
+                let c = ca[i];
+                while (c.charAt(0)==' ') c = c.substring(1,c.length);
+                if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+            }
+            return null;
+        }
+
+        async function fetchStatus(isManualSubmit = false) {
+            let pwdInput = document.getElementById('passwordInput').value;
+            let storedPwd = getCookie('authPwd');
+            
+            let pwd = pwdInput || storedPwd;
+
             try {
-                const response = await fetch(`/.netlify/functions/status${pwd ? '?pwd=' + pwd : ''}`);
+                const response = await fetch(`/.netlify/functions/status${pwd ? '?pwd=' + encodeURIComponent(pwd) : ''}`);
                 const data = await response.json();
                 
-                const statusBox = document.getElementById('statusBox');
                 const timeValue = document.getElementById('timeValue');
                 const detailMessage = document.getElementById('detailMessage');
+                const loginForm = document.getElementById('loginForm');
+                const logSection = document.getElementById('logSection');
 
-                if (data.status === 'success') {
-                    statusBox.textContent = '✅ Sync Successful';
-                    statusBox.className = 'status-box success';
-                } else if (data.status.includes('error')) {
-                    statusBox.textContent = '❌ Sync Failed';
-                    statusBox.className = 'status-box error';
-                    // If detailed error exists (meaning auth succeeded)
-                    if (data.status !== 'error') {
-                        detailMessage.textContent = 'Detail: ' + data.status;
-                        detailMessage.style.color = '#991b1b';
-                    } else {
-                        detailMessage.textContent = data.message || '';
-                        detailMessage.style.color = '#6b7280';
-                    }
-                } else {
-                    statusBox.textContent = '⏳ No Data Yet';
-                    statusBox.className = 'status-box unknown';
-                    detailMessage.textContent = '';
-                }
+                const needsAuth = data.message === "Authentication required to view error details.";
 
+                // Time logic
                 if (data.timestamp) {
-                    const date = new Date(data.timestamp);
-                    timeValue.textContent = date.toLocaleString();
+                    timeValue.textContent = new Date(data.timestamp).toLocaleString();
                 } else {
                     timeValue.textContent = 'Never';
                 }
+
+                // Authentication State Logic
+                if (pwd && !needsAuth && data.status !== 'unknown') {
+                    // Valid auth
+                    if (isManualSubmit && pwdInput) setCookie('authPwd', pwdInput, 30);
+                    loginForm.style.display = 'none'; // Hide login fields
+
+                    if (data.status === 'success') {
+                        setStatusUI('Sync Successful', 'success');
+                        logSection.style.display = 'none';
+                    } else {
+                        setStatusUI('Sync Failed', 'error');
+                        logSection.style.display = 'block';
+                        detailMessage.textContent = data.message || data.status;
+                    }
+                } else {
+                    // Unauthenticated or unknown
+                    if (isManualSubmit && pwdInput && needsAuth) {
+                        alert("Incorrect password!");
+                        setCookie('authPwd', '', -1); // clear invalid cookie
+                    }
+                    
+                    if (data.status === 'success') {
+                        setStatusUI('Sync Successful', 'success');
+                    } else if (data.status.includes('error')) {
+                        setStatusUI('Sync Failed', 'error');
+                    } else {
+                        setStatusUI('No Data Yet', 'unknown');
+                    }
+                }
+
             } catch (error) {
-                document.getElementById('statusBox').textContent = '⚠️ Connection Error';
-                document.getElementById('statusBox').className = 'status-box error';
+                setStatusUI('Connection Error', 'warning');
                 document.getElementById('timeValue').textContent = 'Could not load data';
             }
         }
 
+        function copyLogs() {
+            const logs = document.getElementById('detailMessage').textContent;
+            navigator.clipboard.writeText(logs).then(() => {
+                const btn = document.querySelector('.log-header button');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = 'Copied!';
+                setTimeout(() => btn.innerHTML = originalText, 2000);
+            });
+        }
+
+        // Initial Load
         fetchStatus();
     </script>
 </body>
