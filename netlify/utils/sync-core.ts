@@ -1,6 +1,43 @@
 import { getStore } from '@netlify/blobs';
 import { TodoistApi, AddTaskArgs } from '@doist/todoist-api-typescript';
 import ical, { VEvent } from 'node-ical';
+import * as https from 'https';
+
+const fetchIcalViaHttps = (url: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const req = https.get(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Accept': 'text/calendar, text/plain, */*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Connection': 'keep-alive'
+            },
+            timeout: 8000
+        }, (res) => {
+            if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                // follow 1 redirect
+                resolve(fetchIcalViaHttps(res.headers.location));
+                return;
+            }
+            
+            if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+                res.resume(); // consume response data to free up memory
+                reject(new Error(`HTTP Error ${res.statusCode}: ${res.statusMessage}`));
+                return;
+            }
+            
+            let data = '';
+            res.on('data', (chunk) => data += chunk);
+            res.on('end', () => resolve(data));
+        });
+        
+        req.on('error', (e) => reject(e));
+        req.on('timeout', () => {
+            req.destroy();
+            reject(new Error('HTTPS connection timed out (8000ms limit reached)'));
+        });
+    });
+};
 
 export const runSync = async (): Promise<Response> => {
     const store = getStore("sync-state");
@@ -33,19 +70,7 @@ export const runSync = async (): Promise<Response> => {
 
         let events;
         try {
-            const response = await fetch(icalUrl, {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                    'Accept': 'text/calendar, text/plain, */*',
-                    'Accept-Language': 'en-US,en;q=0.9'
-                }
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
-            }
-            
-            const icalData = await response.text();
+            const icalData = await fetchIcalViaHttps(icalUrl);
             events = await ical.async.parseICS(icalData);
         } catch (icalError: unknown) {
             console.error("Failed to fetch or parse iCal URL:", icalError);
