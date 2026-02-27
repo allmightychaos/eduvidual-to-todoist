@@ -32,3 +32,6 @@ During the deployment process, Netlify will ask you for two environment variable
 - `TODOIST_API_TOKEN`: The API token you copied in Step 2.
 
 Once deployed, the function will run automatically in the background!
+
+### 4. Optional: Secure the Status Page Details
+If you want to view *detailed* error logs on your public status page (e.g. "missing env vars"), you can add a `STATUS_PASSWORD` environment variable in your Netlify dashboard. Once set, you can type this password into the bottom of your status page to unlock debugging details.
