@@ -88,6 +88,13 @@
         button:hover {
             background-color: #4338ca;
         }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spin {
+            animation: spin 0.8s linear infinite;
+            transform-origin: center;
+        }
         .log-section {
             display: none;
             text-align: left;
@@ -283,7 +290,7 @@
         async function triggerForceSync() {
             const btn = document.getElementById('forceSyncBtn');
             const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<svg class="icon" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg> Syncing...';
+            btn.innerHTML = '<svg class="icon spin" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Syncing...';
             btn.disabled = true;
             btn.style.opacity = '0.7';
             btn.style.cursor = 'wait';
@@ -291,13 +298,8 @@
             let pwdToUse = getCookie('authPwd');
             try {
                 const response = await fetch(`/do-sync?pwd=${encodeURIComponent(pwdToUse)}`, { method: 'POST' });
-                if (response.ok) {
-                    alert("Sync triggered and completed successfully!");
-                } else {
-                    alert(`Sync failed with status: ${response.status}`);
-                }
             } catch (error) {
-                alert("Network error triggering sync.");
+                // fetchStatus() below will reflect the outcome
             }
 
             // Wait briefly to allow Netlify Blobs strong consistency to propagate
