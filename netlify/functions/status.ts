@@ -1,13 +1,12 @@
 import { getStore } from "@netlify/blobs";
-import { Handler } from "@netlify/functions";
+import type { Context } from "@netlify/functions";
 
-export const handler: Handler = async (event) => {
+export default async (req: Request, context: Context) => {
     try {
-        const password = event.queryStringParameters?.pwd;
+        const url = new URL(req.url);
+        const password = url.searchParams.get("pwd");
         const correctPassword = process.env.STATUS_PASSWORD;
 
-        // If a password is set in env vars, require it to see ANY detailed status.
-        // If not set, we default to the safe "basic" view.
         const isAuthenticated = correctPassword && password === correctPassword;
 
         const store = getStore("sync-state");
@@ -17,35 +16,28 @@ export const handler: Handler = async (event) => {
             data = await store.get("latest", { type: "json" });
         } catch (e: any) {
             console.error("Blob error:", e);
-            // Store might not exist yet if cron hasn't run
             data = null;
         }
 
         if (!data) {
-            return {
-                statusCode: 200,
-                body: JSON.stringify({ timestamp: null, status: "unknown" }),
-            };
+            return new Response(JSON.stringify({ timestamp: null, status: "unknown" }), {
+                headers: { "Content-Type": "application/json" },
+            });
         }
 
-        // If there's an error, only show the detail if authenticated
         if (data.status && data.status.includes("error") && !isAuthenticated) {
-            data.status = "error"; // mask the detail
+            data.status = "error";
             data.message = "Authentication required to view error details.";
         }
 
-        return {
-            statusCode: 200,
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(data),
-        };
+        return new Response(JSON.stringify(data), {
+            headers: { "Content-Type": "application/json" },
+        });
     } catch (error: any) {
         console.error("Outer error:", error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ timestamp: null, status: "error", message: error.message || "Internal Server Error" }),
-        };
+        return new Response(JSON.stringify({ timestamp: null, status: "error", message: error.message || "Internal Server Error" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+        });
     }
 };
