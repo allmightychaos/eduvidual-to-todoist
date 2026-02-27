@@ -184,18 +184,16 @@
             let pwdInput = document.getElementById('passwordInput').value;
             let storedPwd = getCookie('authPwd');
             
-            let pwd = pwdInput || storedPwd;
+            let pwdToUse = isManualSubmit ? pwdInput : (storedPwd || '');
 
             try {
-                const response = await fetch(`/.netlify/functions/status${pwd ? '?pwd=' + encodeURIComponent(pwd) : ''}`);
+                const response = await fetch(`/.netlify/functions/status${pwdToUse ? '?pwd=' + encodeURIComponent(pwdToUse) : ''}`);
                 const data = await response.json();
                 
                 const timeValue = document.getElementById('timeValue');
                 const detailMessage = document.getElementById('detailMessage');
                 const loginForm = document.getElementById('loginForm');
                 const logSection = document.getElementById('logSection');
-
-                const needsAuth = data.message === "Authentication required to view error details.";
 
                 // Time logic
                 if (data.timestamp) {
@@ -204,23 +202,27 @@
                     timeValue.textContent = 'Never';
                 }
 
-                // Authentication State Logic
-                if (pwd && !needsAuth && data.status !== 'unknown') {
+                // Authentication Logic
+                if (data.isAuthenticated) {
                     // Valid auth
-                    if (isManualSubmit && pwdInput) setCookie('authPwd', pwdInput, 30);
-                    loginForm.style.display = 'none'; // Hide login fields
+                    if (isManualSubmit && pwdToUse) setCookie('authPwd', pwdToUse, 30);
+                    loginForm.style.display = 'none'; // Hide login fields completely
 
                     if (data.status === 'success') {
                         setStatusUI('Sync Successful', 'success');
                         logSection.style.display = 'none';
-                    } else {
+                    } else if (data.status.includes('error')) {
                         setStatusUI('Sync Failed', 'error');
                         logSection.style.display = 'block';
                         detailMessage.textContent = data.message || data.status;
+                    } else {
+                        setStatusUI('No Data Yet', 'unknown');
+                        logSection.style.display = 'block';
+                        detailMessage.textContent = "Script has not executed yet. Awaiting top of the hour.";
                     }
                 } else {
-                    // Unauthenticated or unknown
-                    if (isManualSubmit && pwdInput && needsAuth) {
+                    // Unauthenticated or invalid auth
+                    if (isManualSubmit && pwdToUse) {
                         alert("Incorrect password!");
                         setCookie('authPwd', '', -1); // clear invalid cookie
                     }
@@ -245,7 +247,7 @@
             navigator.clipboard.writeText(logs).then(() => {
                 const btn = document.querySelector('.log-header button');
                 const originalText = btn.innerHTML;
-                btn.innerHTML = 'Copied!';
+                btn.innerHTML = '<svg class="icon" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg> Copied!';
                 setTimeout(() => btn.innerHTML = originalText, 2000);
             });
         }
