@@ -17,11 +17,10 @@ export const handler = schedule("0 * * * *", async (event) => {
         const events = await ical.async.fromURL(icalUrl);
         const eventList = Object.values(events).filter(e => e.type === 'VEVENT');
         
-        const activeTasks = await todoist.getTasks();
-        const activeTaskNames = new Set(activeTasks.map(t => t.content));
+        const tasksResponse = await todoist.getTasks();
+        const activeTaskNames = new Set(tasksResponse.results.map((t: any) => t.content));
         
         for (const item of eventList) {
-            // node-ical types are generic so we cast safely
             const eventItem = item as any;
             const summary = eventItem.summary;
             const end = eventItem.end;
@@ -33,11 +32,9 @@ export const handler = schedule("0 * * * *", async (event) => {
                 continue;
             }
             
-            // Time-shifting logic: Subtract exactly 24 hours
             const originalDate = new Date(end);
             const shiftedDate = new Date(originalDate.getTime() - (24 * 60 * 60 * 1000));
             
-            // Create in Todoist
             console.log(`Creating task: "${summary}" | Due: ${shiftedDate.toISOString()}`);
             await todoist.addTask({
                 content: summary,
