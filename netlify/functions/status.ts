@@ -7,7 +7,7 @@ export default async (req: Request, context: Context) => {
         const password = url.searchParams.get("pwd");
         const correctPassword = process.env.STATUS_PASSWORD;
 
-        const isAuthenticated = correctPassword && password === correctPassword;
+        const isAuthenticated = Boolean(correctPassword && password === correctPassword);
 
         const store = getStore("sync-state");
         let data: any = null;
@@ -20,7 +20,7 @@ export default async (req: Request, context: Context) => {
         }
 
         if (!data) {
-            return new Response(JSON.stringify({ timestamp: null, status: "unknown" }), {
+            return new Response(JSON.stringify({ timestamp: null, status: "unknown", isAuthenticated }), {
                 headers: { "Content-Type": "application/json" },
             });
         }
@@ -30,12 +30,14 @@ export default async (req: Request, context: Context) => {
             data.message = "Authentication required to view error details.";
         }
 
+        data.isAuthenticated = isAuthenticated;
+
         return new Response(JSON.stringify(data), {
             headers: { "Content-Type": "application/json" },
         });
     } catch (error: any) {
         console.error("Outer error:", error);
-        return new Response(JSON.stringify({ timestamp: null, status: "error", message: error.message || "Internal Server Error" }), {
+        return new Response(JSON.stringify({ timestamp: null, status: "error", message: error.message || "Internal Server Error", isAuthenticated: false }), {
             status: 500,
             headers: { "Content-Type": "application/json" },
         });
