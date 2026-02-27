@@ -23,7 +23,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@doist/todoist-api-typescript": "^6.8.1",
     "@netlify/blobs": "^10.7.0",
     "node-ical": "^0.25.4"
   }
