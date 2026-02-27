@@ -1,6 +1,6 @@
 # Eduvidual (Moodle) to Todoist Sync
 
-A serverless automation tool designed to fetch an Eduvidual (Moodle) calendar feed, parse active events, shift assignment deadlines backward by 24 hours, and seamlessly sync them to a specific Todoist project.
+A serverless automation tool that fetches your Eduvidual (Moodle) calendar feed, parses your assignments, automatically shifts their deadlines backward by 24 hours (so you actually get them done on time!), and seamlessly syncs them to your Todoist workspace. 
 
 ## Features
 - **Zero Data Exposure**: No hardcoded API keys or personal URLs. All configuration is handled dynamically via Environment Variables and Netlify Blobs.
@@ -36,8 +36,8 @@ During deployment, Netlify will request the following environment variables:
 #### Specify a Custom Todoist Project
 By default, the script syncs tasks to your global Todoist Inbox. If you want tasks routed to a specific project folder, add a `TODOIST_PROJECT_ID` environment variable in your Netlify dashboard. Note: This requires the *numeric* ID of the project. To find this:
 1. Open the project in the Todoist Web App.
-2. Look at the URL in your browser: `todoist.com/app/project/2354506253`.
-3. Copy that trailing number and set it as `TODOIST_PROJECT_ID`.
+2. Look at the URL in your browser. It should look like: `todoist.com/app/project/eduvidual-2354506253`.
+3. Copy ONLY those final trailing numbers (e.g., `2354506253`) and set it as `TODOIST_PROJECT_ID`. Do not include the project name text.
 
 #### Secure the Status Page
 The deployment includes a public-facing HTML status dashboard. By default, exact error traces are hidden from the public. To view detailed stack traces and runtime information, set a `STATUS_PASSWORD` environment variable in Netlify. You can then authenticate at the bottom of the status page.
