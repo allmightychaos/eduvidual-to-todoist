@@ -47,6 +47,38 @@
             font-size: 1.125rem;
             font-weight: 500;
             margin-top: 0.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .auth-section {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        input[type="password"] {
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.875rem;
+        }
+        button {
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #4338ca;
+        }
+        .detail-message {
+            font-size: 0.875rem;
+            color: #ef4444;
+            margin-top: 0.5rem;
         }
     </style>
 </head>
@@ -60,16 +92,25 @@
 
         <div class="time-label">Latest Fetch:</div>
         <div id="timeValue" class="time-value">Loading...</div>
+
+        <div class="auth-section">
+            <div class="time-label" style="margin-top:0; margin-bottom: 0.5rem;">View Debug Details:</div>
+            <input type="password" id="passwordInput" placeholder="Enter status password" />
+            <button onclick="fetchStatus()">Unlock Details</button>
+            <div id="detailMessage" class="detail-message"></div>
+        </div>
     </div>
 
     <script>
         async function fetchStatus() {
+            const pwd = document.getElementById('passwordInput').value;
             try {
-                const response = await fetch('/.netlify/functions/status');
+                const response = await fetch(`/.netlify/functions/status${pwd ? '?pwd=' + pwd : ''}`);
                 const data = await response.json();
                 
                 const statusBox = document.getElementById('statusBox');
                 const timeValue = document.getElementById('timeValue');
+                const detailMessage = document.getElementById('detailMessage');
 
                 if (data.status === 'success') {
                     statusBox.textContent = '✅ Sync Successful';
@@ -77,9 +118,18 @@
                 } else if (data.status.includes('error')) {
                     statusBox.textContent = '❌ Sync Failed';
                     statusBox.className = 'status-box error';
+                    // If detailed error exists (meaning auth succeeded)
+                    if (data.status !== 'error') {
+                        detailMessage.textContent = 'Detail: ' + data.status;
+                        detailMessage.style.color = '#991b1b';
+                    } else {
+                        detailMessage.textContent = data.message || '';
+                        detailMessage.style.color = '#6b7280';
+                    }
                 } else {
                     statusBox.textContent = '⏳ No Data Yet';
                     statusBox.className = 'status-box unknown';
+                    detailMessage.textContent = '';
                 }
 
                 if (data.timestamp) {
