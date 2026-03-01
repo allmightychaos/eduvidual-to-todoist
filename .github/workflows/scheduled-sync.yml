@@ -2,17 +2,20 @@ name: Scheduled Sync
 
 on:
   schedule:
-    - cron: "0 * * * *"  # Every hour at :00
-  workflow_dispatch:       # Allow manual trigger from GitHub UI
+    - cron: "0 */3 * * *"  # Every 3 hours
+  workflow_dispatch:        # Allow manual trigger from GitHub UI
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger sync
+        env:
+          STATUS_PASSWORD: ${{ secrets.STATUS_PASSWORD }}
         run: |
+          ENCODED=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ['STATUS_PASSWORD'], safe=''))")
           RESPONSE=$(curl -s -o /tmp/body.txt -w "%{http_code}" -X POST \
-            "https://eduvidual-to-todoist.netlify.app/do-sync?pwd=${{ secrets.STATUS_PASSWORD }}")
+            "https://eduvidual-to-todoist.netlify.app/do-sync?pwd=${ENCODED}")
           echo "HTTP status: $RESPONSE"
           echo "Response body: $(cat /tmp/body.txt)"
           if [ "$RESPONSE" != "200" ]; then
