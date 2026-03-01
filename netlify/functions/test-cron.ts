@@ -1,22 +1,40 @@
-// Temporary test file — verifies a Netlify Function can call the /do-sync edge function.
+// Temporary test file — checks if the iCal fetch works from a Netlify Function.
 // Delete this once confirmed working.
 
 export default async (_req: Request) => {
-    try {
-        const res = await fetch("https://eduvidual-to-todoist.netlify.app/do-sync", {
-            method: "POST",
-            signal: AbortSignal.timeout(30000),
+    const icalUrl = Netlify.env.get("EDUVIDUAL_ICAL_URL");
+
+    if (!icalUrl) {
+        return new Response(JSON.stringify({ error: "EDUVIDUAL_ICAL_URL not set" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
         });
-        const body = await res.text();
-        console.log(`[test-cron] status=${res.status} body=${body}`);
-        return new Response(JSON.stringify({ status: res.status, body }), {
+    }
+
+    const start = Date.now();
+    try {
+        const res = await fetch(icalUrl, {
+            signal: AbortSignal.timeout(30000),
+            headers: {
+                "User-Agent": "Mozilla/5.0 (compatible; CalendarSync/1.0)",
+                "Accept": "text/calendar, text/plain, */*",
+            },
+        });
+        const elapsed = Date.now() - start;
+        const text = await res.text();
+        return new Response(JSON.stringify({
+            status: res.status,
+            elapsed_ms: elapsed,
+            bytes: text.length,
+            preview: text.slice(0, 100),
+        }), {
             status: 200,
             headers: { "Content-Type": "application/json" },
         });
     } catch (err) {
+        const elapsed = Date.now() - start;
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[test-cron] error: ${msg}`);
-        return new Response(JSON.stringify({ error: msg }), {
+        return new Response(JSON.stringify({ error: msg, elapsed_ms: elapsed }), {
             status: 500,
             headers: { "Content-Type": "application/json" },
         });
