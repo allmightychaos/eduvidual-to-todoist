@@ -216,12 +216,13 @@
             try {
                 // Add a cache-buster parameter to ensure we get live data
                 const cacheBuster = new Date().getTime();
-                let url = `/api/status?_t=${cacheBuster}`;
+                const url = `/api/status?_t=${cacheBuster}`;
+                const headers = {};
                 if (pwdToUse) {
-                    url += `&pwd=${encodeURIComponent(pwdToUse)}`;
+                    headers['Authorization'] = `Bearer ${pwdToUse}`;
                 }
 
-                const response = await fetch(url);
+                const response = await fetch(url, { headers });
                 const data = await response.json();
                 
                 const timeValue = document.getElementById('timeValue');
@@ -307,8 +308,9 @@
 
             try {
                 const storedPwd = getCookie('authPwd');
-                const url = storedPwd ? `/api/sync?pwd=${encodeURIComponent(storedPwd)}` : '/api/sync';
-                const response = await fetch(url, { method: 'GET' });
+                const headers = { 'Content-Type': 'application/json' };
+                if (storedPwd) headers['Authorization'] = `Bearer ${storedPwd}`;
+                const response = await fetch('/api/sync', { method: 'POST', headers });
                 const data = await response.json();
                 if (response.ok) {
                     const count = data.created ?? 0;
