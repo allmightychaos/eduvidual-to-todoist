@@ -6,9 +6,10 @@ This file tracks upcoming features, optimizations, and known issues for the Eduv
 
 - [x] **Rich task content**: Extract descriptions and URLs from the Moodle iCal feed and include them in the Todoist task body.
 - [x] **Skip past events**: Ignore assignments whose original deadline has already passed - no ghost tasks.
-- [x] **Incremental state saving**: Write the processed-UID list to Netlify Blobs after each successful task creation, so progress isn't lost if the function times out.
+- [x] **Incremental state saving**: Write the processed-UID list to Cloudflare KV after each successful task creation, so progress isn't lost if the worker times out mid-sync.
 - [x] **Custom iCal parser**: Replaced `node-ical` with a lightweight built-in parser - no unnecessary dependencies.
 - [x] **Direct Todoist API calls**: Replaced the `@doist/todoist-api-typescript` SDK with plain `fetch()` calls for a leaner setup.
+- [x] **Status dashboard: task count** - the force sync button shows how many tasks were created in that run.
 
 ## Planned
 
@@ -26,7 +27,6 @@ This file tracks upcoming features, optimizations, and known issues for the Eduv
 ### Quality of Life
 
 - [ ] **Todoist labels/tags** - automatically apply labels based on the Moodle course category.
-- [ ] **Status dashboard: task count** - show how many tasks were created in the last sync run.
 - [ ] **Status dashboard: dark mode** - because staring at a white screen at midnight is painful.
 - [ ] **Completion sync** - when a Moodle assignment's original deadline passes, optionally mark the Todoist task as complete.
 - [ ] **Sync notifications** - optional push/email notification when new tasks are added to Todoist.
