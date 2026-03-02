@@ -219,6 +219,16 @@
             return next.toLocaleString();
         }
 
+        function applyStatusUI(data) {
+            if (data.status === 'success') {
+                setStatusUI('Sync Successful', 'success');
+            } else if (data.status && data.status.includes('error')) {
+                setStatusUI('Sync Failed', 'error');
+            } else {
+                setStatusUI('No Data Yet', 'unknown');
+            }
+        }
+
         async function fetchStatus(isManualSubmit = false) {
             let pwdInput = document.getElementById('passwordInput').value;
             let storedPwd = getCookie('authPwd');
@@ -253,13 +263,7 @@
                     if (isManualSubmit && pwdToUse) setCookie('authPwd', pwdToUse, 30);
                     loginForm.style.display = 'none'; // Hide login fields completely
 
-                    if (data.status === 'success') {
-                        setStatusUI('Sync Successful', 'success');
-                    } else if (data.status.includes('error')) {
-                        setStatusUI('Sync Failed', 'error');
-                    } else {
-                        setStatusUI('No Data Yet', 'unknown');
-                    }
+                    applyStatusUI(data);
                     
                     logSection.style.display = 'block';
                     
@@ -283,13 +287,7 @@
                         setCookie('authPwd', '', -1); // clear invalid cookie
                     }
                     
-                    if (data.status === 'success') {
-                        setStatusUI('Sync Successful', 'success');
-                    } else if (data.status.includes('error')) {
-                        setStatusUI('Sync Failed', 'error');
-                    } else {
-                        setStatusUI('No Data Yet', 'unknown');
-                    }
+                    applyStatusUI(data);
                 }
 
             } catch (error) {
