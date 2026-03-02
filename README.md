@@ -36,7 +36,7 @@ Tired of manually checking Moodle for deadlines? This tool pulls your Eduvidual 
 ```bash
 git clone https://github.com/allmightychaos/Eduvidual-to-Todoist.git
 cd Eduvidual-to-Todoist
-npm install
+npm install --ignore-scripts
 npx wrangler login
 npm run setup
 
