@@ -9,6 +9,8 @@ interface Env {
     STATUS_PASSWORD?: string;
 }
 
+type SyncState = { timestamp?: string | null; status?: string; message?: string; isAuthenticated?: boolean };
+
 // ─── iCal parser ─────────────────────────────────────────────────────────────
 
 /** Undo iCal line-folding (CRLF/LF + whitespace = continuation) */
@@ -16,9 +18,17 @@ function unfold(text: string): string {
     return text.replace(/\r\n[ \t]/g, "").replace(/\n[ \t]/g, "");
 }
 
+// Pre-compiled regex cache for getProp — avoids reconstructing identical regexes on every call
+const propRegexCache = new Map<string, RegExp>();
+
 /** Extract a single property value, ignoring any parameters (e.g. DTEND;TZID=...:value) */
 function getProp(block: string, key: string): string | null {
-    const match = block.match(new RegExp(`^${key}(?:;[^:]*)?:(.+)$`, "im"));
+    let re = propRegexCache.get(key);
+    if (!re) {
+        re = new RegExp(`^${key}(?:;[^:]*)?:(.+)$`, "im");
+        propRegexCache.set(key, re);
+    }
+    const match = block.match(re);
     return match ? match[1].trim() : null;
 }
 
@@ -36,20 +46,29 @@ interface ParsedDate {
     isAllDay: boolean;
 }
 
-function parseIcalDate(raw: string): ParsedDate {
+/** Parse an iCal date string (YYYYMMDD or YYYYMMDDTHHmmss[Z]).
+ *  Returns null if the input is malformed or produces an invalid date. */
+function parseIcalDate(raw: string): ParsedDate | null {
     const s = raw.trim();
+    let iso: string;
+    let isAllDay: boolean;
+
     if (!s.includes("T")) {
-        // All-day: YYYYMMDD
-        return {
-            iso: `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`,
-            isAllDay: true,
-        };
+        // All-day: YYYYMMDD — must be exactly 8 digits
+        if (!/^\d{8}$/.test(s)) return null;
+        iso = `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+        isAllDay = true;
+    } else {
+        // Timed: YYYYMMDDTHHmmss[Z] — must be at least 15 chars
+        if (!/^\d{8}T\d{6}/.test(s)) return null;
+        iso = `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}T${s.slice(9, 11)}:${s.slice(11, 13)}:${s.slice(13, 15)}Z`;
+        isAllDay = false;
     }
-    // Timed: YYYYMMDDTHHmmss[Z] - treat as UTC
-    return {
-        iso: `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}T${s.slice(9, 11)}:${s.slice(11, 13)}:${s.slice(13, 15)}Z`,
-        isAllDay: false,
-    };
+
+    // Confirm the resulting date is actually valid
+    if (isNaN(new Date(iso).getTime())) return null;
+
+    return { iso, isAllDay };
 }
 
 interface VEvent {
@@ -72,11 +91,17 @@ function parseEvents(icalText: string): VEvent[] {
 
         if (!uid || !summary || !dtend) continue;
 
+        const end = parseIcalDate(dtend);
+        if (!end) {
+            console.warn(`Skipping event "${uid}": malformed date "${dtend}"`);
+            continue;
+        }
+
         const rawDesc = getProp(content, "DESCRIPTION");
         events.push({
             uid,
             summary: unescapeVal(summary),
-            end: parseIcalDate(dtend),
+            end,
             url: getProp(content, "URL"),
             description: rawDesc ? unescapeVal(rawDesc) : null,
         });
@@ -145,15 +170,16 @@ async function runSync(env: Env): Promise<{ created: number }> {
         // Shift deadline 24h earlier
         const shifted = new Date(original.getTime() - 24 * 60 * 60 * 1000);
 
-        const description = [
+        const descParts = [
             event.description ?? "",
             event.url ? `\uD83D\uDD17 ${event.url}` : "",
-        ].filter(Boolean).join("\n\n");
+        ].filter(Boolean);
 
         const body: Record<string, string> = {
             content: event.summary,
-            description,
         };
+        // Only include description if there is actual content
+        if (descParts.length > 0) body.description = descParts.join("\n\n");
         if (env.TODOIST_PROJECT_ID) body.project_id = env.TODOIST_PROJECT_ID;
         if (event.end.isAllDay) {
             body.due_date = shifted.toISOString().split("T")[0];
@@ -173,6 +199,7 @@ async function runSync(env: Env): Promise<{ created: number }> {
 
         if (taskRes.ok) {
             processedSet.add(event.uid);
+            // Written after each task to preserve progress if the worker times out mid-sync
             await env.SYNC_STATE.put("processed-events", JSON.stringify(Array.from(processedSet)));
             created++;
         } else {
@@ -189,8 +216,6 @@ async function runSync(env: Env): Promise<{ created: number }> {
 
 async function handleStatus(request: Request, env: Env): Promise<Response> {
     const auth = isAuthorized(request, env);
-
-    type SyncState = { timestamp?: string | null; status?: string; message?: string; isAuthenticated?: boolean };
     let data: SyncState | null = null;
 
     try {
@@ -226,17 +251,14 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
 
 async function handleSync(request: Request, env: Env): Promise<Response> {
     if (request.method !== "POST") {
-        return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
+        return Response.json({ error: "Method Not Allowed" }, {
             status: 405,
-            headers: { "Content-Type": "application/json", "Allow": "POST" },
+            headers: { "Allow": "POST" },
         });
     }
 
     if (!isAuthorized(request, env)) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-            status: 401,
-            headers: { "Content-Type": "application/json" },
-        });
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
@@ -245,10 +267,7 @@ async function handleSync(request: Request, env: Env): Promise<Response> {
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error("Sync error:", msg);
-        return new Response(JSON.stringify({ error: "Sync failed. Check Cloudflare logs for details." }), {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-        });
+        return Response.json({ error: "Sync failed. Check Cloudflare logs for details." }, { status: 500 });
     }
 }
 
@@ -270,12 +289,11 @@ export default {
     },
 
     async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-        // The "5 */3 * * *" cron is a retry that only runs if the primary ":00" sync failed.
+        // "5 */3 * * *" is a retry cron — only runs if the primary ":00" sync failed.
         // If the last sync succeeded within the past 10 minutes, skip.
-        const isRetryCron = controller.cron.startsWith("5 ");
+        const isRetryCron = controller.cron === "5 */3 * * *";
         if (isRetryCron) {
             try {
-                type SyncState = { timestamp?: string; status?: string };
                 const stored = await env.SYNC_STATE.get("latest", { type: "json" }) as SyncState | null;
                 if (stored?.status === "success" && stored?.timestamp) {
                     const ageMs = Date.now() - new Date(stored.timestamp).getTime();
