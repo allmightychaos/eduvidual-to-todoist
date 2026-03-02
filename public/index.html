@@ -226,9 +226,7 @@
             let pwdToUse = isManualSubmit ? pwdInput : (storedPwd || '');
 
             try {
-                // Add a cache-buster parameter to ensure we get live data
-                const cacheBuster = new Date().getTime();
-                const url = `/api/status?_t=${cacheBuster}`;
+                const url = `/api/status`;
                 const headers = {};
                 if (pwdToUse) {
                     headers['Authorization'] = `Bearer ${pwdToUse}`;
